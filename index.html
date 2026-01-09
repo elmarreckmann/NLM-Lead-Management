@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Management</title>
+    <!-- React & ReactDOM (UMD) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel Standalone für JSX/TypeScript -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+    </style>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-presets="react,typescript">
+        const { useEffect, useRef, useState } = React;
+        const { createRoot } = ReactDOM;
+
+        // 1. KONFIGURATION (CONFIGURATION)
+        const CONFIG = {
+            global: {
+                backgroundColor: "#ffffff",
+                textColor: "#333333",
+                accentColor: "#2c3e50", // Dunkelblau als Akzent
+                fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+                maxContentWidth: "1100px",
+                blockGap: "60px",
+                borderRadius: "12px",
+                blockHeight: "600px"
+            },
+            header: {
+                title: "LEAD MANAGEMENT",
+                subtitle: "Der Moment, in dem Kunde, Marketing und Vertrieb zusammenfinden",
+                description: "Effizientes Lead Management ist für B2B-KMU ein entscheidender Erfolgsfaktor. Unsere Lead-Management-Lösung verbindet Marketing Automation, Datenqualität und Übergabe an den Vertrieb in einem zentralen System und sorgt dafür, dass Leads automatisch aus Webseiten, Social Media, Kampagnen und Messen erfasst werden. Alle Kontakte werden intelligent angereichert, einer Dublettenprüfung unterzogen und strukturiert im Lead Management zusammengeführt.\nEin KI-gestütztes Lead Scoring bewertet Leads in Echtzeit anhand von Aktivitäten, Reaktionen und relevanten Unternehmensdaten. Anfragen und Kommentare werden analysiert, Stimmungen erkannt und die Dringlichkeit der Kommunikation transparent dargestellt. Passende Antwortvorschläge werden automatisch vorformuliert, sodass Marketing- und Vertriebsteams schneller, gezielter und konsistenter reagieren können.\nE-Mail-Kampagnen und Marketing Automation B2B sind bereits vollständig im Lead Management enthalten. Weitere Kampagnen-Tools und Kanäle lassen sich über standardisierte Schnittstellen integrieren. Öffnungen, Klicks und Interaktionen fließen direkt zurück ins System und stehen für Auswertungen, Lead Scoring und Optimierungen zur Verfügung.\nLead-Organisationen können durch das Marketing gezielt bewertet und qualifiziert werden, etwa nach Branchenrelevanz, Unternehmensgröße oder Umsatz. Sobald ein Lead die Lifecyclephase MQL erreicht und vertriebsreif ist, erfolgt die automatische Übergabe an das CRM-System zur weiteren vertrieblichen Qualifizierung. Alle relevanten Informationen werden dabei direkt im Lead Management ausgewertet und visuell dargestellt – ohne zusätzliche BI-Tools.\nDas Lead Management ist speziell für die Anforderungen von KMU konzipiert und lässt sich kundenindividuell anpassen. Funktionen, Prozesse, externe Tools, CRM-Systeme und weitere Datenquellen können flexibel über REST-Schnittstellen angebunden werden. Alle beschriebenen Funktionen sind bereits im Standard enthalten und wachsen mit Ihren Anforderungen."
+            },
+            footer: {
+                text: "Lassen Sie uns gemeinsam die Weichen für Ihren Vertriebserfolg stellen. Wir laden Sie herzlich ein, die Potenziale unserer Lösung in einer unverbindlichen Demo kennenzulernen. Sprechen Sie uns an – wir freuen uns darauf, Ihre Anforderungen zu verstehen und gemeinsam eine Strategie zu entwickeln, die Ihr Business nachhaltig voranbringt."
+            },
+            blocks: [
+                {
+                    id: 1,
+                    heading: "Quellen & Datenanreicherung",
+                    // Beispiel für Zeilenumbrüche (\n) und Bulletpoints (- )
+                    bodyText: "Leads entstehen überall – wir bringen sie zusammen. Unser Lead Management erkennt Kontakte automatisch und macht sie sofort nutzbar:\n- Erfassung von Leads aus Webseiten, Social Media, Messen und Kampagnen\n- Automatische Anreicherung mit relevanten Unternehmens- und Kontaktdaten\n- Intelligente Dublettenprüfung vor der Übergabe ins System\n\nSo fließen qualifizierte Leads strukturiert, sauber und in Echtzeit in Ihr Lead Management.",
+                    imagePlaceholder: "[BILD_PLATZHALTER_1_TECH_LAB]",
+                    imgsrc: "https://assets.softr-files.com/applications/93a6b9ea-6415-46e5-ac76-12a9174d09db/assets/26438add-463c-462d-bba4-b56d56dd14e3.png",
+                    ctaText: null, // Kein Button
+                    ctaHref: null
+                },
+                {
+                    id: 2,
+                    heading: "Lead Scoring",
+                    bodyText: "Jeder Lead wird automatisch bewertet. Unser intelligentes Lead Scoring erkennt Relevanz in Echtzeit:\n- Bewertung basierend auf Aktivitäten und Interaktionen\n- Berücksichtigung von Reaktionen auf Kampagnen und Inhalte\n- Einbeziehung von Unternehmensdaten wie Branche, Größe und Standort\n\nSo erkennen Sie auf einen Blick, welche Leads wirklich vertriebsreif sind.",
+                    imagePlaceholder: "[BILD_PLATZHALTER_2_NATURE_DESIGN]",
+                    imgsrc: "https://assets.softr-files.com/applications/93a6b9ea-6415-46e5-ac76-12a9174d09db/assets/bbc8a19c-3ae5-4212-afae-8a48a7408b15.png",
+                    ctaText: null, // Kein Button
+                    ctaHref: null
+                },
+                {
+                    id: 3,
+                    heading: "Anfragen & Kommentare",
+                    bodyText: "Kommunikation wird intelligent ausgewertet. Unser Lead Management analysiert mit Hilfe von KI Anfragen und Kommentare in Echtzeit:\n- Automatische Stimmungsanalyse eingehender Nachrichten\n- Sofortige Erkennung von Dringlichkeit und Eskalationsbedarf\n- Kontextbezogene Vorformulierung von Antworten passend zur Stimmung\n\nSo reagieren Sie schneller, gezielter und immer mit dem richtigen Ton.",
+                    imagePlaceholder: "[BILD_PLATZHALTER_3_WORLD_MAP]",
+                    imgsrc: "https://assets.softr-files.com/applications/93a6b9ea-6415-46e5-ac76-12a9174d09db/assets/7ad26220-8002-43c4-a61b-e4382138e31f.png",
+                    ctaText: null, // Kein Button
+                    ctaHref: null
+                },
+                {
+                    id: 4,
+                    heading: "Lead Nurturing Kampagnen",
+                    bodyText: "Marketing ist nahtlos integriert. E-Mail-Kampagnen und Automatisierungen sind direkt im Lead Management enthalten:\n- Senden Sie neue Leads direkt in die onboarding Phase und starten Sie Nurturing Prozesse datenschutzkonform nach erfolgtem Opt-In\n- Integration weiterer Kampagnen-Tools und Kanäle wie LinkedIn oder WhatsApp über Schnittstellen\n- Rückspielung von Statistiken wie Öffnungen, Klicks und Interaktionen in das Lead Management\n\nSo behalten Sie alle Marketingaktivitäten und deren Wirkung zentral im Blick.",
+                    imagePlaceholder: "[BILD_PLATZHALTER_5_HAPPY_USER]",
+                    imgsrc: "https://assets.softr-files.com/applications/93a6b9ea-6415-46e5-ac76-12a9174d09db/assets/26c921ca-325b-442a-b859-349a18de6166.png",
+                    ctaText: null, // Kein Button
+                    ctaHref: null
+                },
+                {
+                    id: 5,
+                    heading: "Lead Bewertung & Übergabe",
+                    bodyText: "Leads werden ganzheitlich bewertet. Marketing kann Lead-Organisationen gezielt qualifizieren:\n- Bewertung nach zentralen Faktoren wie Branchenrelevanz, Jahresumsatz und Unternehmensgröße\n- Hinterlegung relevanter Vertriebsorganisationen und Zuständigkeiten\n- Teilweise oder vollständige Automatisierung des Prozesses durch KI\n\nSobald ein Lead die Lifecyclephase MQL erreicht und vertriebsreif ist, erfolgt die strukturierte Übergabe an das CRM-System zur weiteren vertrieblichen Qualifizierung.",
+                    imagePlaceholder: "[BILD_PLATZHALTER_6_SECURITY_LOCK]",
+                    imgsrc: "https://assets.softr-files.com/applications/93a6b9ea-6415-46e5-ac76-12a9174d09db/assets/0de3fd9f-467c-4e33-949c-502981b40687.png",
+                    ctaText: null,
+                    ctaHref: null
+                },
+                        {
+                    id: 6,
+                    heading: "Auswertungen",
+                    bodyText: "Alle Daten werden direkt nutzbar. Das Lead Management wertet sämtliche Informationen zentral aus:\n- Visuelle Auswertungen und Dashboards direkt im System\n- Analyse von Leads, Kampagnen und Aktivitäten ohne zusätzliche BI-Tools\n- Transparente Darstellung von Entwicklungen, Trends und Erfolgen\n\nSo treffen Sie fundierte Entscheidungen auf Basis aktueller Daten – ohne Systembrüche.",
+                    imagePlaceholder: "[BILD_PLATZHALTER_4_SCRUM_BOARD]",
+                    imgsrc: "https://assets.softr-files.com/applications/93a6b9ea-6415-46e5-ac76-12a9174d09db/assets/728700e3-0f39-481e-9772-06b23740528c.png",
+                    ctaText: null, // Kein Button
+                    ctaHref: null
+                },
+                {
+                    id: 7,
+                    heading: "Individuelle Anpassungen",
+                    bodyText: "Flexibel bis ins Detail. Das Lead Management passt sich Ihren Anforderungen an:\n- Kundenindividuelle Erweiterung von Funktionen und Prozessen\n- Anbindung externer Tools und CRM-Systeme über standardisierte REST-Schnittstellen\n- Integration zusätzlicher Datenquellen und Kanäle jederzeit möglich\n\nAlle beschriebenen Funktionen sind bereits im Standard enthalten und lassen sich gezielt erweitern.",
+                    imagePlaceholder: "[BILD_PLATZHALTER_7_LIGHTBULB]",
+                    imgsrc: "https://assets.softr-files.com/applications/93a6b9ea-6415-46e5-ac76-12a9174d09db/assets/01eb9bd0-d2ba-4708-a881-3ecb1137d27a.png",
+                    ctaText: "Individualisierung anfragen",
+                    ctaHref: "mailto:christian.terhechte@neuland-medien.de?subject=Lead Management"
+                }
+            ]
+        };
+
+        // CSS Styles injected via React
+        const css = `
+            :root {
+                --bg-color: ${CONFIG.global.backgroundColor};
+                --text-color: ${CONFIG.global.textColor};
+                --accent-color: ${CONFIG.global.accentColor};
+                --font-family: ${CONFIG.global.fontFamily};
+                --max-width: ${CONFIG.global.maxContentWidth};
+                --block-gap: ${CONFIG.global.blockGap};
+                --border-radius: ${CONFIG.global.borderRadius};
+                --block-height: ${CONFIG.global.blockHeight};
+            }
+
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                background-color: var(--bg-color);
+                color: var(--text-color);
+                font-family: var(--font-family);
+                line-height: 1.6;
+                overflow-x: hidden;
+            }
+
+            /* Header Bereich */
+            header {
+                width: 100%;
+                padding: 100px 20px 80px 20px;
+                text-align: center;
+                max-width: 800px;
+                margin: 0 auto;
+            }
+
+            h1 {
+                font-size: 3.5rem;
+                margin-bottom: 10px;
+                font-weight: 800;
+                letter-spacing: -1px;
+            }
+
+            .header-subtitle {
+                font-size: 1.5rem;
+                color: var(--accent-color);
+                margin-bottom: 24px;
+                font-weight: 300;
+                opacity: 0.9;
+            }
+
+            /* Blocksatz für Header und Footer Texte */
+            .header-description-container, 
+            .footer-text-container {
+                font-size: 1.125rem;
+                color: #666;
+                line-height: 1.8;
+                text-align: justify; /* Blocksatz */
+                hyphens: auto;       /* Silbentrennung für schöneren Blocksatz */
+                max-width: 800px;
+                margin: 0 auto;      /* Zentrierung des Containers */
+            }
+            
+            .header-description-container p,
+            .footer-text-container p {
+                margin-bottom: 1rem;
+            }
+
+            /* Layout Container */
+            .container {
+                width: 100%;
+                max-width: var(--max-width);
+                margin: 0 auto;
+                padding: 0 20px 120px 20px;
+                display: flex;
+                flex-direction: column;
+                gap: var(--block-gap);
+            }
+
+            /* Footer Bereich */
+            footer {
+                width: 100%;
+                padding: 0 20px 100px 20px;
+                display: flex;
+                justify-content: center;
+            }
+
+            /* Block Styles */
+            .content-block {
+                display: flex;
+                flex-direction: row;
+                height: var(--block-height); /* Fixe Höhe 400px */
+                width: 100%;
+                background: #fff;
+                overflow: hidden;
+                border-radius: var(--border-radius);
+                
+                /* Basis Styling für 'Pop' */
+                border: 1px solid rgba(0,0,0,0.04);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+
+                /* Reveal Effekt Initialzustand */
+                opacity: 0;
+                transform: translateY(100px) scale(0.98);
+                
+                /* Smooth Entrance Transition */
+                transition: 
+                    opacity 1s cubic-bezier(0.16, 1, 0.3, 1), 
+                    transform 1s cubic-bezier(0.16, 1, 0.3, 1),
+                    box-shadow 0.4s ease;
+                
+                will-change: transform, opacity;
+            }
+
+            /* Zustand wenn im Viewport */
+            .content-block.is-visible {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+
+            /* Hover Effect - nur aktiv wenn sichtbar */
+            .content-block.is-visible:hover {
+                transform: translateY(-8px) scale(1.01);
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                border-color: rgba(0,0,0,0.08);
+                transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+            }
+
+            /* Alternierendes Layout: Gerade Zahlen umdrehen */
+            .content-block:nth-child(even) {
+                flex-direction: row-reverse;
+            }
+
+            /* Spalten Definition */
+            .text-column, .image-column {
+                flex: 1;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+
+            /* Text Spalte Styling */
+            .text-column {
+                padding: 50px;
+                align-items: flex-start; /* Linksbündig */
+                z-index: 1;
+            }
+
+            .text-column h2 {
+                font-size: 2.2rem;
+                margin-bottom: 1rem;
+                color: var(--accent-color);
+                font-weight: 700;
+            }
+
+            /* Standard Paragraph Styles */
+            .text-column p {
+                font-size: 1.1rem;
+                margin-bottom: 2rem;
+                color: #555;
+                line-height: 1.7;
+            }
+
+            /* Listen Styles (Bullet Points) */
+            .text-column ul {
+                margin-bottom: 2rem;
+                padding-left: 1.2rem;
+                list-style-type: disc;
+            }
+
+            .text-column li {
+                font-size: 1.1rem;
+                color: #555;
+                margin-bottom: 0.5rem;
+                line-height: 1.6;
+            }
+            
+            .text-column li::marker {
+                color: var(--accent-color);
+            }
+
+            .cta-button {
+                display: inline-block;
+                padding: 12px 28px;
+                background-color: var(--accent-color);
+                color: #fff;
+                text-decoration: none;
+                border-radius: 30px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+                cursor: pointer;
+                font-size: 0.95rem;
+                letter-spacing: 0.5px;
+            }
+
+            .cta-button:hover {
+                background-color: #1a252f;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(44, 62, 80, 0.3);
+            }
+
+            /* Bild Spalte Styling */
+            .image-column {
+                background-color: #f8f9fa;
+                align-items: center;
+                position: relative;
+                overflow: hidden; /* Wichtig damit der Zoom nicht übersteht */
+            }
+
+            .placeholder-visual {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background-color: #f1f3f5;
+                color: #adb5bd;
+                font-weight: 600;
+                font-size: 1rem;
+                text-align: center;
+                letter-spacing: 1px;
+            }
+
+            .block-image {
+                width: 100%;
+                height: 100%;
+                object-fit: contain; /* Zeigt das ganze Bild anstatt es abzuschneiden */
+                display: block;
+                transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smoother Zoom */
+            }
+
+            /* Zoom Effekt beim Hovern über den Block */
+            .content-block.is-visible:hover .block-image {
+                transform: scale(1.08);
+            }
+
+            /* Mobile Responsive */
+            @media (max-width: 768px) {
+                :root {
+                    --block-height: auto; /* Auf Mobile fixe Höhe aufheben */
+                }
+
+                header {
+                    padding: 60px 20px;
+                }
+
+                h1 {
+                    font-size: 2.5rem;
+                }
+
+                .header-subtitle {
+                    font-size: 1.2rem;
+                }
+                
+                .header-description-container,
+                .footer-text-container {
+                    text-align: left; /* Auf kleinen Screens oft besser lesbar als Blocksatz */
+                }
+
+                .content-block {
+                    flex-direction: column !important; /* Immer stapeln */
+                    height: auto; /* Flexibel für Mobile */
+                    margin-bottom: 20px;
+                    /* Weniger Bewegung auf Mobile für bessere Performance */
+                    transform: translateY(30px);
+                }
+                
+                .content-block.is-visible:hover {
+                     transform: translateY(0); /* Hover Effekt auf Touchscreens reduzieren */
+                }
+
+                .image-column {
+                    height: 250px; /* Fixe Bildhöhe auf Mobile */
+                    width: 100%;
+                }
+                
+                .text-column {
+                    padding: 40px 25px;
+                }
+            }
+        `;
+
+        // Helper Funktion zum Formatieren des Textes mit Listen und Absätzen
+        const renderFormattedText = (text) => {
+            if (!text) return null;
+            const lines = text.split('\n');
+            const elements = [];
+            let currentList = [];
+
+            lines.forEach((line, index) => {
+                const trimmed = line.trim();
+                // Check für Bullet Points (Bindestrich, Punkt, Sternchen)
+                const isListItem = trimmed.startsWith('- ') || trimmed.startsWith('• ') || trimmed.startsWith('* ');
+                
+                if (isListItem) {
+                    // Füge Listenpunkt zur aktuellen Liste hinzu
+                    currentList.push(trimmed.substring(1).trim());
+                } else {
+                    // Wenn eine Liste angesammelt wurde, render sie jetzt
+                    if (currentList.length > 0) {
+                        elements.push(
+                            <ul key={`ul-${index}`} className="content-list">
+                                {currentList.map((item, i) => <li key={i}>{item}</li>)}
+                            </ul>
+                        );
+                        currentList = [];
+                    }
+                    
+                    // Render den Text als Absatz, wenn er nicht leer ist
+                    if (trimmed) {
+                         elements.push(<p key={`p-${index}`}>{line}</p>);
+                    }
+                }
+            });
+
+            // Falls am Ende noch Listenpunkte übrig sind
+            if (currentList.length > 0) {
+                elements.push(
+                    <ul key={`ul-end`} className="content-list">
+                        {currentList.map((item, i) => <li key={i}>{item}</li>)}
+                    </ul>
+                );
+            }
+            
+            return elements;
+        };
+
+        // Block Component
+        const ContentBlock = ({ block }) => {
+            const sectionRef = useRef(null);
+            const [isVisible, setIsVisible] = useState(false);
+
+            useEffect(() => {
+                const observer = new IntersectionObserver(
+                    ([entry]) => {
+                        // Nur triggern wenn es wirklich ein Stück weit im Viewport ist
+                        if (entry.isIntersecting) {
+                            setIsVisible(true);
+                            if (sectionRef.current) observer.unobserve(sectionRef.current);
+                        }
+                    },
+                    {
+                        root: null,
+                        rootMargin: '0px 0px -100px 0px', // Trigger etwas später (100px vor bottom) für schöneren Effekt
+                        threshold: 0.15 
+                    }
+                );
+
+                if (sectionRef.current) {
+                    observer.observe(sectionRef.current);
+                }
+
+                return () => {
+                    if (sectionRef.current) observer.unobserve(sectionRef.current);
+                };
+            }, []);
+
+            const hasImage = 'imgsrc' in block && block.imgsrc;
+
+            return (
+                <section 
+                    ref={sectionRef} 
+                    className={`content-block ${isVisible ? 'is-visible' : ''}`} 
+                    id={`block-${block.id}`}
+                >
+                    <div className="text-column">
+                        <h2>{block.heading}</h2>
+                        {/* Hier verwenden wir die neue Render-Funktion */}
+                        {renderFormattedText(block.bodyText)}
+                        
+                        {block.ctaText && block.ctaHref && (
+                            <a href={block.ctaHref} className="cta-button">
+                                {block.ctaText}
+                            </a>
+                        )}
+                    </div>
+                    <div className="image-column">
+                        {hasImage ? (
+                            <img 
+                                src={block.imgsrc} 
+                                alt={block.heading} 
+                                className="block-image"
+                            />
+                        ) : (
+                            <div className="placeholder-visual">
+                                {block.imagePlaceholder}
+                            </div>
+                        )}
+                    </div>
+                </section>
+            );
+        };
+
+        const App = () => {
+            return (
+                <React.Fragment>
+                    <style dangerouslySetInnerHTML={{ __html: css }} />
+                    <header id="main-header">
+                        <h1 id="header-title">{CONFIG.header.title}</h1>
+                        <p className="header-subtitle">{CONFIG.header.subtitle}</p>
+                        <div className="header-description-container">
+                            {renderFormattedText(CONFIG.header.description)}
+                        </div>
+                    </header>
+
+                    <main id="blocks-container" className="container">
+                        {CONFIG.blocks.map((block) => (
+                            <ContentBlock key={block.id} block={block} />
+                        ))}
+                    </main>
+
+                    <footer id="main-footer">
+                        <div className="footer-text-container">
+                            {renderFormattedText(CONFIG.footer.text)}
+                        </div>
+                    </footer>
+                </React.Fragment>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
