@@ -1,6 +1,6 @@
 from .ryanair import RyanairClient
-from .easyjet import EasyJetClient
 from .condor  import CondorClient
 # EurowingsClient entfernt – api.eurowings.com erfordert Bearer-Token
+# EasyJetClient entfernt – alle bekannten Endpoints liefern 404
 
-ALL_AIRLINE_CLIENTS = [RyanairClient, EasyJetClient, CondorClient]
+ALL_AIRLINE_CLIENTS = [RyanairClient, CondorClient]
