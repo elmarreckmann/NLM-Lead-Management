@@ -10,6 +10,7 @@ load_dotenv()
 AMADEUS_API_KEY = os.getenv("AMADEUS_API_KEY", "")
 AMADEUS_API_SECRET = os.getenv("AMADEUS_API_SECRET", "")
 DUFFEL_API_KEY = os.getenv("DUFFEL_API_KEY", "")
+SERPAPI_KEY    = os.getenv("SERPAPI_KEY", "")
 
 # --- Search Parameters ---
 ORIGIN_AIRPORTS = ["PAD", "HAJ", "DUS"]
