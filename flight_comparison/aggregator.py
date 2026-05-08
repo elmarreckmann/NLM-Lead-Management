@@ -21,10 +21,14 @@ def collect_all_offers(
     use_amadeus: bool = True,
     use_duffel: bool = True,
     use_scrapers: bool = True,
+    use_airlines: bool = True,
     progress_cb: Callable[[str], None] | None = None,
 ) -> pd.DataFrame:
     """Run all enabled sources and return a deduplicated DataFrame."""
     all_offers: list[FlightOffer] = []
+
+    if use_airlines:
+        all_offers.extend(_run_airlines(progress_cb))
 
     if use_amadeus:
         all_offers.extend(_run_amadeus(progress_cb))
@@ -48,6 +52,23 @@ def collect_all_offers(
 # ------------------------------------------------------------------
 # Per-source runners
 # ------------------------------------------------------------------
+
+def _run_airlines(progress_cb: Callable | None) -> list[FlightOffer]:
+    from airlines import ALL_AIRLINE_CLIENTS
+    offers: list[FlightOffer] = []
+    for ClientClass in ALL_AIRLINE_CLIENTS:
+        name = ClientClass.SOURCE_NAME
+        _notify(progress_cb, f"Airline API: {name}")
+        try:
+            client = ClientClass()
+            batch = client.search_all()
+            offers.extend(batch)
+            logger.info("%s: %d offers", name, len(batch))
+        except Exception as exc:
+            logger.error("%s client error: %s", name, exc)
+    logger.info("Airline APIs total: %d raw offers", len(offers))
+    return offers
+
 
 def _run_amadeus(progress_cb: Callable | None) -> list[FlightOffer]:
     from config import AMADEUS_API_KEY

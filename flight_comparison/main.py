@@ -26,6 +26,7 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Flugpreisvergleich PAD/HAJ/DUS → PMI (Mai–Jun 2026)"
     )
+    p.add_argument("--no-airlines", action="store_true", help="Direkte Airline-APIs überspringen (Ryanair, Eurowings, easyJet)")
     p.add_argument("--no-amadeus",  action="store_true", help="Amadeus API überspringen")
     p.add_argument("--no-duffel",   action="store_true", help="Duffel API überspringen")
     p.add_argument("--no-scraping", action="store_true", help="Alle Web-Scraper überspringen")
@@ -39,14 +40,16 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
 
+    use_airlines = not args.no_airlines
     use_amadeus  = not args.no_amadeus
     use_duffel   = not args.no_duffel
     use_scrapers = not args.no_scraping
 
-    _print_banner(use_amadeus, use_duffel, use_scrapers)
+    _print_banner(use_airlines, use_amadeus, use_duffel, use_scrapers)
 
     # --- Collect ---
     df = collect_all_offers(
+        use_airlines=use_airlines,
         use_amadeus=use_amadeus,
         use_duffel=use_duffel,
         use_scrapers=use_scrapers,
@@ -81,7 +84,7 @@ def _progress(msg: str) -> None:
     print(f"  ⟳  {msg}", flush=True)
 
 
-def _print_banner(amadeus: bool, duffel: bool, scrapers: bool) -> None:
+def _print_banner(airlines: bool, amadeus: bool, duffel: bool, scrapers: bool) -> None:
     print()
     print("╔══════════════════════════════════════════════════════════════════╗")
     print("║        FLUGPREISVERGLEICH  –  Mai / Juni 2026                   ║")
@@ -89,12 +92,13 @@ def _print_banner(amadeus: bool, duffel: bool, scrapers: bool) -> None:
     print("╚══════════════════════════════════════════════════════════════════╝")
     print()
     print("Aktive Quellen:")
+    print(f"  {'✓' if airlines else '✗'}  Airline-APIs direkt (Ryanair, Eurowings, easyJet)")
     print(f"  {'✓' if amadeus  else '✗'}  Amadeus API")
     print(f"  {'✓' if duffel   else '✗'}  Duffel API")
     print(f"  {'✓' if scrapers else '✗'}  Web-Scraper (Google Flights, Kayak, Skyscanner,")
     print( "                           Check24, Fluege.de, Idealo)")
     print()
-    print("Suche läuft … (das kann 10–30 Minuten dauern)")
+    print("Suche läuft …")
     print()
 
 
