@@ -1,27 +1,29 @@
-"""Ryanair public fare-finder API – no key required."""
+"""Ryanair – cheapestPerDay Methode für vollständige Preisgitter.
+
+Strategie:
+  1. GET cheapestPerDay  ORIGIN → PMI  (Hinflug-Preise pro Tag)
+  2. GET cheapestPerDay  PMI → ORIGIN  (Rückflug-Preise pro Tag)
+  3. Alle gültigen 7–10-Nacht-Kombinationen kreuzen → Gesamtpreis = Hin + Rück
+  4. Direkter Buchungslink je Kombination
+"""
 
 import sys
-from datetime import date, datetime
+from datetime import date, timedelta
 
 sys.path.insert(0, "..")
-from config import ORIGIN_AIRPORTS, get_return_dates, SEARCH_START_DATE, SEARCH_END_DATE, RETURN_LATEST_DATE
+from config import (ORIGIN_AIRPORTS, SEARCH_START_DATE, SEARCH_END_DATE,
+                    RETURN_LATEST_DATE, MIN_NIGHTS, MAX_NIGHTS)
 from models import FlightOffer
 from utils import get_logger, random_delay
 from .base import make_session, get_json
 
 logger = get_logger("airlines.ryanair")
 
-_FARE_FINDER = "https://www.ryanair.com/api/farfnd/v4/roundTripFares"
+_CHEAPEST_PER_DAY = "https://www.ryanair.com/api/farfnd/v4/oneWayFares/{origin}/{dest}/cheapestPerDay"
+_BOOKING_BASE     = "https://www.ryanair.com/de/de/booking/new-booking"
 
-# Ryanair doesn't serve DUS – they use NRN (Weeze). We map it so the user
-# still gets Ryanair prices for the Rhine/Ruhr region.
-_AIRPORT_MAP = {
-    "DUS": "DUS",   # kept – will yield 0 results but won't error
-    "HAJ": "HAJ",
-    "PAD": "PAD",
-}
-
-_BOOKING_BASE = "https://www.ryanair.com/de/de/booking/new-booking"
+# Ryanair bedient DUS nicht direkt (nutzt NRN/Weeze)
+_RYANAIR_AIRPORTS = {"PAD", "HAJ"}
 
 
 class RyanairClient:
@@ -30,101 +32,116 @@ class RyanairClient:
     def __init__(self) -> None:
         self._session = make_session()
         self._session.headers.update({
-            "Origin": "https://www.ryanair.com",
+            "Origin":  "https://www.ryanair.com",
             "Referer": "https://www.ryanair.com/de/de/",
+            "Accept":  "application/json, text/plain, */*",
         })
 
     def search_all(self) -> list[FlightOffer]:
         offers: list[FlightOffer] = []
         for origin in ORIGIN_AIRPORTS:
-            mapped = _AIRPORT_MAP.get(origin, origin)
-            batch = self._search_origin(mapped, origin)
+            if origin not in _RYANAIR_AIRPORTS:
+                logger.info("Ryanair: %s wird nicht bedient – überspringe", origin)
+                continue
+            batch = self._search_origin(origin)
             offers.extend(batch)
-            random_delay(2, 4)
+            random_delay(2, 3)
         return offers
 
-    def _search_origin(self, iata: str, display_origin: str) -> list[FlightOffer]:
-        """Single API call covers the full date range for one origin."""
-        params = {
-            "departureAirportIataCode": iata,
-            "arrivalAirportIataCode":   "PMI",
-            "outboundDepartureDateFrom": SEARCH_START_DATE.isoformat(),
-            "outboundDepartureDateTo":   SEARCH_END_DATE.isoformat(),
-            "inboundDepartureDateFrom":  SEARCH_START_DATE.isoformat(),
-            "inboundDepartureDateTo":    RETURN_LATEST_DATE.isoformat(),
-            "durationFrom": 7,
-            "durationTo":   10,
-            "currency":     "EUR",
-            "priceValueTo": 10000,
-            "adult":        1,
-        }
-        logger.info("Ryanair fare-finder  %s → PMI  (%s–%s)",
-                    iata, SEARCH_START_DATE, SEARCH_END_DATE)
-        data = get_json(self._session, _FARE_FINDER, params,
-                        extra_headers={"Accept": "application/json, text/plain, */*"})
-        if not data:
+    # ------------------------------------------------------------------
+    # Kernlogik: Preisgitter aufbauen
+    # ------------------------------------------------------------------
+
+    def _search_origin(self, origin: str) -> list[FlightOffer]:
+        # Hinflug-Preise pro Tag: ORIGIN → PMI
+        out_prices = self._fetch_cheapest_per_day(origin, "PMI")
+        if not out_prices:
+            logger.warning("Ryanair: keine Hinflug-Preise für %s", origin)
             return []
 
-        fares = data.get("fares") if isinstance(data, dict) else []
-        if not fares:
-            logger.info("Ryanair: no fares for %s", iata)
+        # Rückflug-Preise pro Tag: PMI → ORIGIN
+        ret_prices = self._fetch_cheapest_per_day("PMI", origin)
+        if not ret_prices:
+            logger.warning("Ryanair: keine Rückflug-Preise für %s", origin)
             return []
 
-        return [o for raw in fares
-                if (o := self._parse_fare(raw, display_origin)) is not None]
+        logger.info("Ryanair %s: %d Hintage, %d Rücktage – kombiniere …",
+                    origin, len(out_prices), len(ret_prices))
+        return self._combine(origin, out_prices, ret_prices)
 
-    def _parse_fare(self, raw: dict, origin: str) -> FlightOffer | None:
-        try:
-            outbound = raw["outbound"]
-            inbound  = raw["inbound"]
-            summary  = raw.get("summary", {})
+    def _fetch_cheapest_per_day(self, origin: str, dest: str) -> dict[date, tuple[float, str]]:
+        """Gibt {Datum: (Preis, Abflugzeit)} zurück."""
+        prices: dict[date, tuple[float, str]] = {}
 
-            out_dep = outbound.get("departureDate", "")
-            in_dep  = inbound.get("departureDate", "")
-            out_date, out_time = _split_dt(out_dep)
-            in_date,  in_time  = _split_dt(in_dep)
+        # API ist monatsweise – Mai und Juni separat abfragen
+        for year, month in [(2026, 5), (2026, 6)]:
+            month_date = date(year, month, 1)
+            url = _CHEAPEST_PER_DAY.format(origin=origin, dest=dest)
+            data = get_json(self._session, url,
+                            {"outboundMonthOfDate": month_date.isoformat(),
+                             "currency": "EUR"})
+            if not data:
+                continue
 
-            # Total price from summary; fall back to sum of legs
-            price = (
-                summary.get("price", {}).get("value")
-                or (outbound.get("price", {}).get("value", 0)
-                    + inbound.get("price", {}).get("value", 0))
-            )
-            if not price or float(price) <= 0:
-                return None
+            fares = data.get("outbound", {}).get("fares", [])
+            for fare in fares:
+                if fare.get("soldOut") or fare.get("unavailable"):
+                    continue
+                day_str = fare.get("day", "")
+                price   = fare.get("price", {}).get("value")
+                if not day_str or not price or float(price) <= 0:
+                    continue
+                try:
+                    d = date.fromisoformat(day_str[:10])
+                except ValueError:
+                    continue
+                dep_time = fare.get("departureTime", "")[:5]
+                prices[d] = (round(float(price), 2), dep_time)
 
-            # Validate return is 7–10 nights
-            try:
-                nights = (datetime.fromisoformat(in_date) - datetime.fromisoformat(out_date)).days
-                if not (7 <= nights <= 10):
-                    return None
-            except Exception:
-                pass
+            random_delay(1, 2)
 
-            booking_url = (
-                f"{_BOOKING_BASE}/{origin}/PMI/{out_date}/{in_date}/1/0/0/0"
-            )
+        return prices
 
-            return FlightOffer(
-                abflughafen=origin,
-                abflugdatum=out_date,
-                abflugzeit=out_time,
-                rueckflugdatum=in_date,
-                rueckflugzeit=in_time,
-                airline="Ryanair",
-                direktflug="ja",   # Ryanair operates point-to-point only
-                zwischenstopps=0,
-                preis_eur=round(float(price), 2),
-                quelle=self.SOURCE_NAME,
-                buchungs_url=booking_url,
-            )
-        except (KeyError, TypeError, ValueError) as exc:
-            logger.debug("Ryanair parse error: %s  raw=%s", exc, str(raw)[:120])
-            return None
+    # ------------------------------------------------------------------
+    # Kombination Hin × Rück → FlightOffer
+    # ------------------------------------------------------------------
 
+    def _combine(self, origin: str,
+                 out_prices: dict[date, tuple[float, str]],
+                 ret_prices: dict[date, tuple[float, str]]) -> list[FlightOffer]:
+        offers: list[FlightOffer] = []
 
-def _split_dt(iso: str) -> tuple[str, str]:
-    if "T" in iso:
-        d, t = iso.split("T", 1)
-        return d, t[:5]
-    return iso, ""
+        for out_date, (out_price, out_time) in sorted(out_prices.items()):
+            if not (SEARCH_START_DATE <= out_date <= SEARCH_END_DATE):
+                continue
+
+            for nights in range(MIN_NIGHTS, MAX_NIGHTS + 1):
+                ret_date = out_date + timedelta(days=nights)
+                if ret_date > RETURN_LATEST_DATE:
+                    break
+                if ret_date not in ret_prices:
+                    continue
+
+                ret_price, ret_time = ret_prices[ret_date]
+                total = round(out_price + ret_price, 2)
+
+                offers.append(FlightOffer(
+                    abflughafen=origin,
+                    abflugdatum=out_date.isoformat(),
+                    abflugzeit=out_time,
+                    rueckflugdatum=ret_date.isoformat(),
+                    rueckflugzeit=ret_time,
+                    airline="Ryanair",
+                    direktflug="ja",
+                    zwischenstopps=0,
+                    preis_eur=total,
+                    quelle=self.SOURCE_NAME,
+                    buchungs_url=(
+                        f"{_BOOKING_BASE}/{origin}/PMI"
+                        f"/{out_date.isoformat()}/{ret_date.isoformat()}/1/0/0/0"
+                    ),
+                ))
+
+        offers.sort(key=lambda o: o.preis_eur)
+        logger.info("Ryanair %s: %d Kombinationen gefunden", origin, len(offers))
+        return offers
