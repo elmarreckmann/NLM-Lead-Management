@@ -16,9 +16,9 @@ SERPAPI_KEY    = os.getenv("SERPAPI_KEY", "")
 ORIGIN_AIRPORTS = ["PAD", "HAJ", "DUS"]
 DESTINATION_AIRPORT = "PMI"
 
-SEARCH_START_DATE = date(2026, 5, 18)
-SEARCH_END_DATE = date(2026, 6, 23)   # latest outbound so return ≤ 30 Jun
-RETURN_LATEST_DATE = date(2026, 6, 30)
+SEARCH_START_DATE  = date(2026, 6, 1)
+SEARCH_END_DATE    = date(2026, 7, 8)   # latest outbound so return ≤ 15 Jul (min 7 nights)
+RETURN_LATEST_DATE = date(2026, 7, 15)
 
 MIN_NIGHTS = 7
 MAX_NIGHTS = 10
